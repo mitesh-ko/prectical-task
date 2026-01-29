@@ -175,9 +175,10 @@ const ProductListTable: React.FC<Props> = ({ products }) => {
 
                             <Tooltip title="Delete">
                                 <IconButton
-                                    onClick={() =>
+                                    onClick={() =>{
                                         router.delete(`/products/${row.original.id}`)
-                                    }
+                                        fetchProducts()
+                                    }}
                                 >
                                     <Delete fontSize="small" />
                                 </IconButton>

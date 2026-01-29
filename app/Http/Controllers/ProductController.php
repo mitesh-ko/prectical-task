@@ -54,7 +54,9 @@ class ProductController extends Controller
 
     public function create(Request $request)
     {
-        return Inertia::render('product/CreateUpdate');
+        return Inertia::render('product/CreateUpdate', [
+            'product' => new Product(),
+        ]);
     }
 
     /**
@@ -119,12 +121,12 @@ class ProductController extends Controller
             'product_description' => 'nullable|string',
             'images' => 'required|array|min:1',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'primary_image_index' => 'required|integer|min:0',
         ]);
+
         $product->update([
-            'product_name' => $request->input('product_name'),
-            'product_price' => $request->input('product_price'),
-            'product_description' => $request->input('product_description'),
+            'name' => $request->input('product_name'),
+            'price' => $request->input('product_price'),
+            'description' => $request->input('product_description'),
         ]);
 
         $product->images()->delete();

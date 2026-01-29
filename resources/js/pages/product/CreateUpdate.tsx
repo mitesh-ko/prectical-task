@@ -57,7 +57,7 @@ export default function CreateProduct({ product }: Props) {
         },
         {
             title: isEdit ? 'Update Product' : 'Create Product',
-            href: isEdit ? update.url(product!.id!) : store.url(),
+            href: isEdit ? update.url(product?.id ?? '') : store.url()
         },
     ]
 
@@ -70,13 +70,9 @@ export default function CreateProduct({ product }: Props) {
                     {...(isEdit
                         ? update.form(product!.id!)
                         : store.form())}
-                    defaults={{
-                        product_name: product?.product_name ?? '',
-                        product_price: product?.product_price ?? '',
-                        product_description: product?.product_description ?? '',
-                    }}
                     encType="multipart/form-data"
                     className="flex flex-col gap-6"
+                    method={product!.id ? 'PUT': 'POST'}
                 >
                     {({ processing, errors }) => (
                         <div className="grid gap-6">
@@ -91,6 +87,7 @@ export default function CreateProduct({ product }: Props) {
                                     required
                                     autoFocus
                                     placeholder="e.g. Mechanical Keyboard"
+                                    defaultValue={product?.name ?? ''}
                                 />
                                 <InputError
                                     message={errors.product_name}
@@ -107,6 +104,7 @@ export default function CreateProduct({ product }: Props) {
                                     step="0.01"
                                     required
                                     placeholder="0.00"
+                                    defaultValue={product?.price ?? ''}
                                 />
                                 <InputError
                                     message={errors.product_price}
@@ -123,6 +121,7 @@ export default function CreateProduct({ product }: Props) {
                                     name="product_description"
                                     placeholder="Describe your product..."
                                     className="min-h-[100px]"
+                                    defaultValue={product?.description ?? ''}
                                 />
                                 <InputError
                                     message={errors.product_description}
