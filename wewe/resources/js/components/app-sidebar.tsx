@@ -15,6 +15,7 @@ import {
 import { dashboard } from '@/routes';
 import type { NavItem } from '@/types';
 import AppLogo from './app-logo';
+import { index } from '@/routes/products'
 
 const mainNavItems: NavItem[] = [
     {
@@ -22,6 +23,11 @@ const mainNavItems: NavItem[] = [
         href: dashboard(),
         icon: LayoutGrid,
     },
+    {
+            title: 'Products',
+            href: index.url(),
+            icon: LayoutGrid,
+},
 ];
 
 const footerNavItems: NavItem[] = [

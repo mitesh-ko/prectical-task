@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Product;
 use Illuminate\Http\Request;
+use Inertia\Inertia;
 
 class ProductController extends Controller
 {
@@ -12,7 +13,28 @@ class ProductController extends Controller
      */
     public function index()
     {
-        Product::with('images')->get();
+        $products = Product::with(['images' => function ($query) {
+            $query->where('is_primary', true);
+        }])->get()->map(function ($product) {
+            return [
+                'id' => $product->id,
+                'product_name' => $product->name,
+                'product_price' => $product->price,
+                'product_description' => $product->description,
+                'primary_image' => $product->images->first()
+                    ? asset('storage/' . $product->images->first()->image_path)
+                    : 'https://via.placeholder.com/150',
+            ];
+        });
+
+        return Inertia::render('product/List', [
+            'products' => $products
+        ]);
+    }
+
+    public function create(Request $request)
+    {
+        return Inertia::render('product/CreateUpdate');
     }
 
     /**
@@ -20,19 +42,18 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
+        
         $request->validate([
             'product_name' => 'required|string|max:255',
             'product_price' => 'required|numeric',
             'product_description' => 'nullable|string',
             'images' => 'required|array|min:1',
             'images.*' => 'image|mimes:jpeg,png,jpg,gif,svg|max:2048',
-            'primary_image_index' => 'required|integer|min:0',
         ]);
-
         $product = Product::create([
-            'product_name' => $request->input('product_name'),
-            'product_price' => $request->input('product_price'),
-            'product_description' => $request->input('product_description'),
+            'name' => $request->input('product_name'),
+            'price' => $request->input('product_price'),
+            'description' => $request->input('product_description'),
         ]);
 
         foreach ($request->file('images') as $index => $image) {
@@ -45,7 +66,15 @@ class ProductController extends Controller
             ]);
         }
 
-        return response()->json(['message' => 'Product created successfully', 'product' => $product], 201);
+        return redirect()->route('products.index')->with('success', 'Product created successfully');
+    }
+
+    public function edit(Request $request)
+    {
+        $product = Product::with('images')->findOrFail($request->route('product'));
+        return Inertia::render('product/CreateUpdate', [
+            'product' => $product
+        ]);
     }
 
     /**
@@ -88,7 +117,7 @@ class ProductController extends Controller
                 'is_primary' => $isPrimary,
             ]);
         }
-        return response()->json(['message' => 'Product updated successfully', 'product' => $product], 200);
+        return redirect()->route('products.index')->with('success', 'Product updated successfully');
     }
 
     /**
@@ -100,6 +129,6 @@ class ProductController extends Controller
         $product->delete();
         $product->images()->delete();
 
-        return response()->json(['message' => 'Product deleted successfully'], 200);
+        return redirect()->back()->with('success', 'Product deleted successfully');
     }
 }
