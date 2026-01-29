@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React, { useEffect, useMemo, useState } from 'react'
 import { Head, router } from '@inertiajs/react'
 import {
     MaterialReactTable,
@@ -6,22 +6,35 @@ import {
     MRT_Row,
 } from 'material-react-table'
 import { Box, IconButton, Tooltip } from '@mui/material'
-import { Edit as EditIcon, Delete as DeleteIcon } from '@mui/icons-material'
-
 import AppLayout from '@/layouts/app-layout'
 import { BreadcrumbItem } from '@/types'
 import { Button } from '@/components/ui/button'
-import { create } from '@/routes/products'
+import { create, destroy, edit, listing } from '@/routes/products'
 import { Product } from '@/types/product'
+import { dashboard } from '@/routes'
+import { Delete, Edit } from 'lucide-react'
 
 type Props = {
     products: Product[]
 }
 
 const ProductListTable: React.FC<Props> = ({ products }) => {
+    const [data, setData] = useState<any[]>([])
+    const [isLoading, setIsLoading] = useState(true)
+
+    const [pagination, setPagination] = useState({
+        pageIndex: 0,
+        pageSize: 10,
+    })
+
+    const [sorting, setSorting] = useState<any[]>([])
+    const [rowCount, setRowCount] = useState(0)
+
+
     const columns = useMemo<MRT_ColumnDef<Product>[]>(
         () => [
             {
+                enableSorting: false,
                 accessorKey: 'primary_image',
                 header: 'Image',
                 size: 80,
@@ -44,6 +57,7 @@ const ProductListTable: React.FC<Props> = ({ products }) => {
                 ),
             },
             {
+                enableSorting: false,
                 accessorKey: 'product_description',
                 header: 'Desc',
                 size: 200,
@@ -71,19 +85,44 @@ const ProductListTable: React.FC<Props> = ({ products }) => {
     )
 
     const handleEdit = (row: MRT_Row<Product>) => {
-        router.visit(`/products/${row.original.id}/edit`)
+        router.visit(edit.url(row.original.id))
     }
 
     const handleDelete = (row: MRT_Row<Product>) => {
-        router.delete(`/products/${row.original.id}`, {
+        router.delete(destroy.url(row.original.id), {
             preserveScroll: true,
         })
     }
 
+    const fetchProducts = async () => {
+        setIsLoading(true)
+
+        const sort = sorting[0]
+
+        const params = new URLSearchParams({
+            page: String(pagination.pageIndex + 1),
+            per_page: String(pagination.pageSize),
+            sort_by: sort?.id ?? 'created_at',
+            sort_order: sort?.desc ? 'desc' : 'asc',
+        })
+
+        const response = await fetch(`${listing.url()}?${params}`)
+        const result = await response.json()
+
+        console.log('Fetched products:', result)
+        setData(result.data)
+        setRowCount(result.total)
+        setIsLoading(false)
+    }
+
+    useEffect(() => {
+        fetchProducts()
+    }, [pagination.pageIndex, pagination.pageSize, sorting])
+
     const breadcrumbs: BreadcrumbItem[] = [
         {
             title: 'Dashboard',
-            href: '/dashboard',
+            href: dashboard.url(),
         },
     ]
 
@@ -109,27 +148,38 @@ const ProductListTable: React.FC<Props> = ({ products }) => {
 
                 <MaterialReactTable
                     columns={columns}
-                    data={products}
-                    enableRowActions
+                    data={data}
+                    manualPagination
+                    manualSorting
+                    rowCount={rowCount}
+                    state={{
+                        isLoading,
+                        pagination,
+                        sorting,
+                    }}
                     positionActionsColumn="last"
-                    muiTablePaperProps={{ elevation: 0 }}
+                    onPaginationChange={setPagination}
+                    onSortingChange={setSorting}
+                    enableRowActions
                     renderRowActions={({ row }) => (
                         <Box sx={{ display: 'flex', gap: '0.5rem' }}>
                             <Tooltip title="Edit">
                                 <IconButton
-                                    onClick={() => handleEdit(row)}
-                                    className="text-blue-600 hover:bg-blue-50"
+                                    onClick={() =>
+                                        router.visit(`/products/${row.original.id}/edit`)
+                                    }
                                 >
-                                    <EditIcon fontSize="small" />
+                                    <Edit fontSize="small" />
                                 </IconButton>
                             </Tooltip>
 
                             <Tooltip title="Delete">
                                 <IconButton
-                                    onClick={() => handleDelete(row)}
-                                    className="text-red-600 hover:bg-red-50"
+                                    onClick={() =>
+                                        router.delete(`/products/${row.original.id}`)
+                                    }
                                 >
-                                    <DeleteIcon fontSize="small" />
+                                    <Delete fontSize="small" />
                                 </IconButton>
                             </Tooltip>
                         </Box>

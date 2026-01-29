@@ -8,28 +8,48 @@ use Inertia\Inertia;
 
 class ProductController extends Controller
 {
+
+    public function listingData(Request $request)
+    {
+        $perPage   = $request->integer('per_page', 10);
+        $sortBy    = $request->get('sort_by', 'created_at'); // name | price | created_at
+        $sortOrder = $request->get('sort_order', 'desc');    // asc | desc
+
+        // Whitelist allowed sort columns
+        $allowedSorts = [
+            'name' => 'name',
+            'price' => 'price',
+            'created_at' => 'created_at',
+        ];
+
+        $sortColumn = $allowedSorts[$sortBy] ?? 'created_at';
+
+        $products = Product::with([
+            'images' => fn($q) => $q->where('is_primary', true),
+        ])
+            ->orderBy($sortColumn, $sortOrder)
+            ->paginate($perPage)
+            ->through(function ($product) {
+                return [
+                    'id' => $product->id,
+                    'product_name' => $product->name,
+                    'product_price' => $product->price,
+                    'product_description' => $product->description,
+                    'primary_image' => $product->images->first()
+                        ? asset('storage/' . $product->images->first()->image_path)
+                        : 'https://via.placeholder.com/150',
+                ];
+            });
+
+        return response()->json($products);
+    }
+
     /**
      * Display a listing of the resource.
      */
     public function index()
     {
-        $products = Product::with(['images' => function ($query) {
-            $query->where('is_primary', true);
-        }])->get()->map(function ($product) {
-            return [
-                'id' => $product->id,
-                'product_name' => $product->name,
-                'product_price' => $product->price,
-                'product_description' => $product->description,
-                'primary_image' => $product->images->first()
-                    ? asset('storage/' . $product->images->first()->image_path)
-                    : 'https://via.placeholder.com/150',
-            ];
-        });
-
-        return Inertia::render('product/List', [
-            'products' => $products
-        ]);
+        return Inertia::render('product/List');
     }
 
     public function create(Request $request)
@@ -42,7 +62,7 @@ class ProductController extends Controller
      */
     public function store(Request $request)
     {
-        
+
         $request->validate([
             'product_name' => 'required|string|max:255',
             'product_price' => 'required|numeric',
@@ -72,8 +92,9 @@ class ProductController extends Controller
     public function edit(Request $request)
     {
         $product = Product::with('images')->findOrFail($request->route('product'));
+
         return Inertia::render('product/CreateUpdate', [
-            'product' => $product
+            'product' => $product,
         ]);
     }
 
@@ -117,6 +138,7 @@ class ProductController extends Controller
                 'is_primary' => $isPrimary,
             ]);
         }
+
         return redirect()->route('products.index')->with('success', 'Product updated successfully');
     }
 
